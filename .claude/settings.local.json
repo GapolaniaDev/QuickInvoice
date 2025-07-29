@@ -5,7 +5,8 @@
       "Bash(npx react-native:*)",
       "Bash(rm:*)",
       "Bash(pkill:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

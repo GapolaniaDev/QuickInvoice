@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Employee, Company, Invoice } from '../types';
+import { 
+  DEFAULT_EMPLOYEE_DATA, 
+  DEFAULT_COMPANY_DATA, 
+  DEFAULT_CLEANING_SELECTIONS 
+} from '../config/defaultData';
 
 const KEYS = {
   EMPLOYEE: 'employee_data',
@@ -22,10 +27,10 @@ export const StorageService = {
   async getEmployeeData(): Promise<Employee | null> {
     try {
       const data = await AsyncStorage.getItem(KEYS.EMPLOYEE);
-      return data ? JSON.parse(data) : null;
+      return data ? JSON.parse(data) : DEFAULT_EMPLOYEE_DATA;
     } catch (error) {
       console.error('Error getting employee data:', error);
-      return null;
+      return DEFAULT_EMPLOYEE_DATA;
     }
   },
 
@@ -42,10 +47,10 @@ export const StorageService = {
   async getCompanyData(): Promise<Company | null> {
     try {
       const data = await AsyncStorage.getItem(KEYS.COMPANY);
-      return data ? JSON.parse(data) : null;
+      return data ? JSON.parse(data) : DEFAULT_COMPANY_DATA;
     } catch (error) {
       console.error('Error getting company data:', error);
-      return null;
+      return DEFAULT_COMPANY_DATA;
     }
   },
 
@@ -111,10 +116,10 @@ export const StorageService = {
   async getCleaningSelections(): Promise<{ kitchen: boolean; night: boolean }> {
     try {
       const data = await AsyncStorage.getItem(KEYS.CLEANING_SELECTIONS);
-      return data ? JSON.parse(data) : { kitchen: false, night: true };
+      return data ? JSON.parse(data) : DEFAULT_CLEANING_SELECTIONS;
     } catch (error) {
       console.error('Error getting cleaning selections:', error);
-      return { kitchen: false, night: true };
+      return DEFAULT_CLEANING_SELECTIONS;
     }
   },
 
