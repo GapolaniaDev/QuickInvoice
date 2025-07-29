@@ -216,8 +216,9 @@ export const ExportScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView flex={1} bg="gray.50">
-      <VStack space={4} p={4}>
+    <Box flex={1} bg="gray.50">
+      <ScrollView flex={1}>
+        <VStack space={4} p={4}>
         {/* Invoice Summary */}
         <Box bg="blue.500" rounded="lg" p={4} shadow={2}>
           <VStack space={2}>
@@ -381,10 +382,10 @@ export const ExportScreen: React.FC = () => {
             )}
           </VStack>
         </Box>
-      </VStack>
-    </ScrollView>
+        </VStack>
+      </ScrollView>
 
-    {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar */}
     <Box
       bg="surface.50"
       shadow={5}
@@ -449,6 +450,7 @@ export const ExportScreen: React.FC = () => {
           Settings
         </Button>
       </HStack>
+      </Box>
     </Box>
   );
 };

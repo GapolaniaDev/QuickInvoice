@@ -99,8 +99,9 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView flex={1} bg="surface.100">
-      <VStack space={4} p={4}>
+    <Box flex={1} bg="surface.100">
+      <ScrollView flex={1}>
+        <VStack space={4} p={4}>
         {/* App Info */}
         <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
@@ -339,9 +340,9 @@ export const SettingsScreen: React.FC = () => {
           </AlertDialog.Footer>
         </AlertDialog.Content>
       </AlertDialog>
-    </ScrollView>
+      </ScrollView>
 
-    {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar */}
     <Box
       bg="surface.50"
       shadow={5}
@@ -408,6 +409,7 @@ export const SettingsScreen: React.FC = () => {
           Settings
         </Button>
       </HStack>
+      </Box>
     </Box>
   );
 };

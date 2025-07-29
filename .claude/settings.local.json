@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(pod install:*)",
-      "Bash(npx react-native:*)"
+      "Bash(npx react-native:*)",
+      "Bash(rm:*)",
+      "Bash(pkill:*)",
+      "Bash(xcodebuild:*)"
     ],
     "deny": []
   }

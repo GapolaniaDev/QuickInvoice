@@ -380,8 +380,9 @@ export const HomeScreen: React.FC = () => {
   const styles = createStyles(isDarkMode);
 
   return (
-    <ScrollView flex={1} bg="surface.100">
-      <VStack space={4} p={4}>
+    <Box flex={1} bg="surface.100">
+      <ScrollView flex={1}>
+        <VStack space={4} p={4}>
         {/* Header */}
         <Box bg="blue.500" rounded="lg" p={4} shadow={2}>
           <VStack space={2} alignItems="center">
@@ -689,10 +690,10 @@ export const HomeScreen: React.FC = () => {
             {invoice.items.length === 0 ? 'No Items to Export' : `Export & Save • $${invoice.totalAmount.toFixed(2)}`}
           </Button>
         </VStack>
-      </VStack>
-    </ScrollView>
+        </VStack>
+      </ScrollView>
 
-    {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar */}
     <Box
       bg="surface.50"
       shadow={5}
@@ -759,6 +760,7 @@ export const HomeScreen: React.FC = () => {
           Settings
         </Button>
       </HStack>
+      </Box>
     </Box>
   );
 };
