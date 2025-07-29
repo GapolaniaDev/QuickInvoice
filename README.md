@@ -1,97 +1,149 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# QuickInvoice
 
-# Getting Started
+A React Native mobile application designed for cleaning service contractors to create, manage, and export professional invoices. The app streamlines the invoicing process by automatically calculating cleaning schedules and generating Excel-formatted invoices ready for client delivery.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- **Employee Profile Management**: Store personal and business information including ABN, BSB, and account details
+- **Company Information**: Manage client company details and addresses
+- **Automated Cleaning Schedules**: 
+  - Kitchen cleaning (Monday-Thursday, $120 per session) for different floors at 128 Waymouth St
+  - Night cleaning (Monday-Thursday, $90 per session) for Y-Suite City Gardens
+- **Invoice Generation**: Automatic calculation of bi-weekly invoice numbers and totals
+- **Excel Export**: Generate professional Excel invoices with all service details
+- **Invoice History**: Save and manage previously created invoices
+- **Data Persistence**: All information is stored locally on the device
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Technology Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **React Native 0.80.2**: Cross-platform mobile development
+- **TypeScript**: Type-safe development
+- **Redux Toolkit**: State management
+- **NativeBase**: UI component library
+- **React Navigation**: Navigation framework
+- **AsyncStorage**: Local data persistence
+- **XLSX**: Excel file generation
+- **React Native Share**: File sharing capabilities
 
-```sh
-# Using npm
+## Prerequisites
+
+Before running this project, ensure you have completed the [React Native Environment Setup](https://reactnative.dev/docs/set-up-your-environment).
+
+## Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd QuickInvoice
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Install iOS dependencies** (iOS only)
+   ```bash
+   cd ios && pod install && cd ..
+   ```
+
+## Running the Application
+
+### Start Metro Server
+
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+### Run on iOS
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+```bash
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Run on Android
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```bash
+npm run android
+```
 
-## Step 3: Modify your app
+### Clear Cache and Restart (iOS)
 
-Now that you have successfully run the app, let's make changes!
+If you encounter issues with changes not appearing on your device, use this command to clear cache and reinstall:
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```bash
+npm run ios:fix
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+This command will clean the iOS build, reinstall pods, and restart the application.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Project Structure
 
-## Congratulations! :tada:
+```
+src/
+├── components/          # Reusable UI components
+├── navigation/         # Navigation configuration
+├── screens/           # Main application screens
+│   ├── HomeScreen.tsx       # Main input and configuration screen
+│   ├── DetailsScreen.tsx    # Invoice details view
+│   ├── ExportScreen.tsx     # Invoice export and saving
+│   ├── InvoicesHistoryScreen.tsx # Saved invoices history
+│   └── SettingsScreen.tsx   # Application settings
+├── services/          # Data services
+│   └── storageService.ts    # AsyncStorage management
+├── store/            # Redux store configuration
+│   ├── companySlice.ts      # Company data state
+│   ├── employeeSlice.ts     # Employee data state
+│   ├── invoiceSlice.ts      # Current invoice state
+│   └── invoicesSlice.ts     # Invoice history state
+├── types/            # TypeScript type definitions
+├── utils/            # Utility functions
+│   ├── excelUtils.ts        # Excel generation utilities
+│   └── invoiceUtils.ts      # Invoice calculation utilities
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+## Usage
 
-### Now what?
+1. **Setup Employee Information**: Enter your personal details, ABN, and banking information
+2. **Configure Company Details**: Add client company information
+3. **Select Cleaning Services**: Choose between kitchen cleaning and/or night cleaning
+4. **Set Invoice Period**: Enter start and end dates for the billing period
+5. **Review Details**: Check generated invoice items and totals
+6. **Export or Save**: Generate Excel files or save invoices for future reference
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## Business Logic
 
-# Troubleshooting
+### Cleaning Schedule Calculation
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+- **Kitchen Cleaning**: Automatically generates entries for Monday through Thursday within the specified date range
+  - Different floors assigned by day (1-4, 5-8, 9-12, 13-16)
+  - Fixed rate of $120 per session
+  
+- **Night Cleaning**: Generates entries for Monday through Thursday
+  - Consistent location (Y-Suite City Gardens)
+  - Fixed rate of $90 per session
 
-# Learn More
+### Invoice Numbering
 
-To learn more about React Native, take a look at the following resources:
+The application automatically calculates bi-weekly invoice numbers based on the start date, using the first Monday of the year as a reference point.
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## Scripts
+
+- `npm start`: Start Metro bundler
+- `npm run ios`: Run on iOS simulator/device
+- `npm run android`: Run on Android emulator/device
+- `npm run ios:fix`: Clean cache and restart iOS build
+- `npm run lint`: Run ESLint
+- `npm test`: Run tests
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is private and proprietary.
