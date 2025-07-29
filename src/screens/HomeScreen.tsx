@@ -9,8 +9,14 @@ import {
   FormControl,
   ScrollView,
   useToast,
+  Pressable,
+  Modal,
+  Center,
+  Icon,
 } from 'native-base';
-import { TextInput, StyleSheet } from 'react-native';
+import { TextInput, StyleSheet, Platform } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
@@ -27,18 +33,20 @@ import {
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { StorageService } from '../services/storageService';
 import { getKitchenCleaningDays, getNightCleaningDays, getInvoiceNumber } from '../utils/invoiceUtils';
+import { useTheme } from '../contexts/ThemeContext';
 
-const styles = StyleSheet.create({
+// Create theme-aware styles
+const createStyles = (isDarkMode: boolean) => StyleSheet.create({
   input: {
-    backgroundColor: 'white',
+    backgroundColor: isDarkMode ? '#2D2D2D' : '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: isDarkMode ? '#525252' : '#d1d5db',
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
     minHeight: 40,
-    color: '#000000',
+    color: isDarkMode ? '#F8F9FA' : '#000000',
   },
 });
 
@@ -48,6 +56,7 @@ export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch();
   const toast = useToast();
+  const { isDarkMode } = useTheme();
   
   const { employee, company, invoice } = useSelector((state: RootState) => state);
   
@@ -55,6 +64,20 @@ export const HomeScreen: React.FC = () => {
   const [endDate, setEndDateLocal] = useState('');
   const [kitchenCleaningEnabled, setKitchenCleaningEnabled] = useState(false);
   const [nightCleaningEnabled, setNightCleaningEnabled] = useState(true);
+  
+  // Date picker states
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [startDateObj, setStartDateObj] = useState(new Date());
+  const [endDateObj, setEndDateObj] = useState(new Date());
+
+  // Utility function to format date as YYYY-MM-DD
+  const formatDateToString = useCallback((date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
   const loadStoredData = useCallback(async () => {
     try {
@@ -89,6 +112,23 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     loadStoredData();
   }, [loadStoredData]);
+
+  // Initialize default dates on component mount
+  useEffect(() => {
+    const today = new Date();
+    if (!startDate) {
+      const formattedToday = formatDateToString(today);
+      setStartDateLocal(formattedToday);
+      setStartDateObj(today);
+    }
+    if (!endDate) {
+      const nextWeek = new Date(today);
+      nextWeek.setDate(today.getDate() + 7);
+      const formattedNextWeek = formatDateToString(nextWeek);
+      setEndDateLocal(formattedNextWeek);
+      setEndDateObj(nextWeek);
+    }
+  }, []); // Only run once on mount
 
   const saveEmployeeData = useCallback(async () => {
     try {
@@ -131,13 +171,22 @@ export const HomeScreen: React.FC = () => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    console.log('=== CALCULATING ITEMS ===');
+    console.log('Date range:', startDate, 'to', endDate);
+    console.log('Kitchen enabled:', kitchenCleaningEnabled);
+    console.log('Night enabled:', nightCleaningEnabled);
+    console.log('Current items before clear:', invoice.items.length);
+
     // Limpiar items existentes
     dispatch(removeItemsByType('1'));
+    console.log('Items after clearing type 1:', invoice.items.length);
 
     // Calcular kitchen cleaning si está habilitado
     if (kitchenCleaningEnabled) {
       const kitchenItems = getKitchenCleaningDays(start, end);
-      kitchenItems.forEach((item) => {
+      console.log('Generated kitchen items:', kitchenItems.length);
+      kitchenItems.forEach((item, index) => {
+        console.log(`Adding kitchen item ${index + 1}:`, item);
         dispatch(addOrUpdateItem({
           id: null,
           date: item.date,
@@ -153,7 +202,9 @@ export const HomeScreen: React.FC = () => {
     // Calcular night cleaning si está habilitado
     if (nightCleaningEnabled) {
       const nightItems = getNightCleaningDays(start, end);
-      nightItems.forEach((item) => {
+      console.log('Generated night items:', nightItems.length);
+      nightItems.forEach((item, index) => {
+        console.log(`Adding night item ${index + 1}:`, item);
         dispatch(addOrUpdateItem({
           id: null,
           date: item.date,
@@ -167,6 +218,7 @@ export const HomeScreen: React.FC = () => {
     }
 
     dispatch(calculateTotal());
+    console.log('Final items count after calculation:', invoice.items.length);
   }, [startDate, endDate, kitchenCleaningEnabled, nightCleaningEnabled, dispatch, toast]);
 
   const handleDateChange = useCallback(() => {
@@ -189,6 +241,75 @@ export const HomeScreen: React.FC = () => {
     
     calculateItems();
   }, [startDate, endDate, dispatch, toast, calculateItems]);
+
+  // Date picker handlers
+  const handleStartDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      // Validate that start date is not after end date
+      if (endDate && selectedDate >= new Date(endDate)) {
+        toast.show({
+          title: 'Invalid date',
+          description: 'Start date must be before end date',
+        });
+        return;
+      }
+      
+      setStartDateObj(selectedDate);
+      const formattedDate = formatDateToString(selectedDate);
+      setStartDateLocal(formattedDate);
+      
+      // Auto-trigger calculation if both dates are set
+      if (endDate) {
+        setTimeout(() => handleDateChange(), 100);
+      }
+    }
+  }, [endDate, formatDateToString, handleDateChange, toast]);
+
+  const handleEndDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      // Validate that end date is not before start date
+      if (startDate && selectedDate <= new Date(startDate)) {
+        toast.show({
+          title: 'Invalid date',
+          description: 'End date must be after start date',
+        });
+        return;
+      }
+      
+      setEndDateObj(selectedDate);
+      const formattedDate = formatDateToString(selectedDate);
+      setEndDateLocal(formattedDate);
+      
+      // Auto-trigger calculation if both dates are set
+      if (startDate) {
+        setTimeout(() => handleDateChange(), 100);
+      }
+    }
+  }, [startDate, formatDateToString, handleDateChange, toast]);
+
+  const closeStartDatePicker = useCallback(() => {
+    setShowStartDatePicker(false);
+  }, []);
+
+  const closeEndDatePicker = useCallback(() => {
+    setShowEndDatePicker(false);
+  }, []);
+
+  const showStartDatePickerModal = useCallback(() => {
+    setShowStartDatePicker(true);
+  }, []);
+
+  const showEndDatePickerModal = useCallback(() => {
+    setShowEndDatePicker(true);
+  }, []);
 
   // Handlers para employee fields
   const handleEmployeeName = useCallback((text: string) => {
@@ -255,31 +376,26 @@ export const HomeScreen: React.FC = () => {
     }
   }, [kitchenCleaningEnabled, nightCleaningEnabled, calculateItems]);
 
+  // Create styles based on current theme
+  const styles = createStyles(isDarkMode);
+
   return (
-    <ScrollView flex={1} bg="gray.50">
+    <ScrollView flex={1} bg="surface.100">
       <VStack space={4} p={4}>
-        {/* Header with navigation buttons */}
-        <HStack space={2} justifyContent="space-between">
-          <Button
-            flex={1}
-            onPress={handleNavigateToHistory}
-            variant="outline"
-            colorScheme="blue"
-          >
-            History
-          </Button>
-          <Button
-            flex={1}
-            onPress={handleNavigateToSettings}
-            variant="outline"
-            colorScheme="blue"
-          >
-            Settings
-          </Button>
-        </HStack>
+        {/* Header */}
+        <Box bg="blue.500" rounded="lg" p={4} shadow={2}>
+          <VStack space={2} alignItems="center">
+            <Text color="white" fontSize="2xl" fontWeight="bold">
+              QuickInvoice
+            </Text>
+            <Text color="blue.100" fontSize="sm" textAlign="center">
+              Create professional invoices quickly and easily
+            </Text>
+          </VStack>
+        </Box>
 
         {/* Employee Information */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
             <Text fontSize="lg" fontWeight="bold" color="blue.600">
               Employee Information
@@ -355,7 +471,7 @@ export const HomeScreen: React.FC = () => {
         </Box>
 
         {/* Date Selection */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
             <Text fontSize="lg" fontWeight="bold" color="blue.600">
               Invoice Period
@@ -364,39 +480,93 @@ export const HomeScreen: React.FC = () => {
               <HStack space={2}>
                 <FormControl flex={1}>
                   <FormControl.Label>Start Date</FormControl.Label>
-                  <TextInput
-                    style={styles.input}
-                    value={startDate}
-                    onChangeText={setStartDateLocal}
-                    onBlur={handleDateChange}
-                    placeholder="2025-01-01"
-                    autoCorrect={false}
-                  />
+                  <Pressable onPress={showStartDatePickerModal}>
+                    <Box style={styles.input}>
+                      <Text color={startDate ? "text.50" : "gray.400"}>
+                        {startDate || "Select start date"}
+                      </Text>
+                    </Box>
+                  </Pressable>
                   <Text fontSize="xs" color="gray.500" mt={1}>
-                    Format: YYYY-MM-DD (e.g., 2025-01-01)
+                    Tap to select date
                   </Text>
                 </FormControl>
                 
                 <FormControl flex={1}>
                   <FormControl.Label>End Date</FormControl.Label>
-                  <TextInput
-                    style={styles.input}
-                    value={endDate}
-                    onChangeText={setEndDateLocal}
-                    onBlur={handleDateChange}
-                    placeholder="2025-01-31"
-                    autoCorrect={false}
-                  />
+                  <Pressable onPress={showEndDatePickerModal}>
+                    <Box style={styles.input}>
+                      <Text color={endDate ? "text.50" : "gray.400"}>
+                        {endDate || "Select end date"}
+                      </Text>
+                    </Box>
+                  </Pressable>
                   <Text fontSize="xs" color="gray.500" mt={1}>
-                    Format: YYYY-MM-DD (e.g., 2025-01-31)
+                    Tap to select date
                   </Text>
                 </FormControl>
             </HStack>
           </VStack>
         </Box>
 
+        {/* Start Date Picker Modal */}
+        <Modal isOpen={showStartDatePicker} onClose={closeStartDatePicker}>
+          <Modal.Content maxWidth="400px">
+            <Modal.CloseButton />
+            <Modal.Header>Select Start Date</Modal.Header>
+            <Modal.Body>
+              <Center>
+                <DateTimePicker
+                  value={startDateObj}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleStartDateChange}
+                />
+              </Center>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button.Group space={2}>
+                <Button variant="ghost" colorScheme="blueGray" onPress={closeStartDatePicker}>
+                  Cancel
+                </Button>
+                <Button onPress={closeStartDatePicker}>
+                  Done
+                </Button>
+              </Button.Group>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal>
+
+        {/* End Date Picker Modal */}
+        <Modal isOpen={showEndDatePicker} onClose={closeEndDatePicker}>
+          <Modal.Content maxWidth="400px">
+            <Modal.CloseButton />
+            <Modal.Header>Select End Date</Modal.Header>
+            <Modal.Body>
+              <Center>
+                <DateTimePicker
+                  value={endDateObj}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleEndDateChange}
+                />
+              </Center>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button.Group space={2}>
+                <Button variant="ghost" colorScheme="blueGray" onPress={closeEndDatePicker}>
+                  Cancel
+                </Button>
+                <Button onPress={closeEndDatePicker}>
+                  Done
+                </Button>
+              </Button.Group>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal>
+
         {/* Cleaning Options */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
             <Text fontSize="lg" fontWeight="bold" color="blue.600">
               Cleaning Options
@@ -423,7 +593,7 @@ export const HomeScreen: React.FC = () => {
         </Box>
 
         {/* Company Information */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
             <Text fontSize="lg" fontWeight="bold" color="blue.600">
               Company Information
@@ -507,7 +677,7 @@ export const HomeScreen: React.FC = () => {
             size="lg"
             isDisabled={invoice.items.length === 0}
           >
-            View Details ({invoice.items.length} items)
+            {invoice.items.length === 0 ? 'Generate Items First' : `Review Invoice • ${invoice.items.length} ${invoice.items.length === 1 ? 'item' : 'items'}`}
           </Button>
           
           <Button
@@ -516,10 +686,79 @@ export const HomeScreen: React.FC = () => {
             size="lg"
             isDisabled={invoice.items.length === 0}
           >
-            Export Invoice (${invoice.totalAmount})
+            {invoice.items.length === 0 ? 'No Items to Export' : `Export & Save • $${invoice.totalAmount.toFixed(2)}`}
           </Button>
         </VStack>
       </VStack>
     </ScrollView>
+
+    {/* Bottom Navigation Bar */}
+    <Box
+      bg="surface.50"
+      shadow={5}
+      safeAreaBottom
+      borderTopWidth={1}
+      borderTopColor="gray.200"
+    >
+      <HStack justifyContent="space-around" alignItems="center" py={2}>
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToHistory}
+          leftIcon={<Icon as={MaterialIcons} name="history" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          History
+        </Button>
+        
+        <Button
+          variant="ghost" 
+          size="sm"
+          flex={1}
+          onPress={() => {}} // Already on home
+          leftIcon={<Icon as={MaterialIcons} name="home" size="sm" />}
+          _text={{ fontSize: "xs", fontWeight: "bold" }}
+          colorScheme="blue"
+        >
+          Home
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm" 
+          flex={1}
+          onPress={handleNavigateToDetails}
+          leftIcon={<Icon as={MaterialIcons} name="description" size="sm" />}
+          _text={{ fontSize: "xs" }}
+          isDisabled={invoice.items.length === 0}
+        >
+          Details
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToExport}
+          leftIcon={<Icon as={MaterialIcons} name="file-download" size="sm" />}
+          _text={{ fontSize: "xs" }}
+          isDisabled={invoice.items.length === 0}
+        >
+          Export
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToSettings}
+          leftIcon={<Icon as={MaterialIcons} name="settings" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          Settings
+        </Button>
+      </HStack>
+    </Box>
   );
 };

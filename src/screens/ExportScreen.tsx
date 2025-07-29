@@ -10,16 +10,21 @@ import {
   FormControl,
   Divider,
   Spinner,
+  Icon,
 } from 'native-base';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { TextInput, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootState } from '../store';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { saveInvoice } from '../store/invoicesSlice';
 import { clearCurrentInvoice } from '../store/invoiceSlice';
 import { StorageService } from '../services/storageService';
 import { generateAndShareExcel } from '../utils/excelUtils';
 import { generateInvoiceTitle } from '../utils/invoiceUtils';
 import { Invoice } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 const styles = StyleSheet.create({
   input: {
@@ -35,7 +40,10 @@ const styles = StyleSheet.create({
   },
 });
 
+type ExportNavigationProp = NavigationProp<RootStackParamList, 'Export'>;
+
 export const ExportScreen: React.FC = () => {
+  const navigation = useNavigation<ExportNavigationProp>();
   const dispatch = useDispatch();
   const toast = useToast();
   
@@ -102,25 +110,53 @@ export const ExportScreen: React.FC = () => {
     try {
       setIsSaving(true);
       
+      // Generate a more unique ID to avoid collisions
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${invoice.invoiceNumber}`;
+      
+      // Deep copy all data to prevent reference pollution
       const invoiceToSave: Invoice = {
-        id: `${Date.now()}-${invoice.invoiceNumber}`,
+        id: uniqueId,
         invoiceNumber: invoice.invoiceNumber,
-        employee: { ...employee },
-        company: { ...company },
+        employee: JSON.parse(JSON.stringify(employee)),
+        company: JSON.parse(JSON.stringify(company)),
         startDate: invoice.startDate,
         endDate: invoice.endDate,
-        items: [...invoice.items],
+        items: JSON.parse(JSON.stringify(invoice.items)),
         totalAmount: invoice.totalAmount,
         createdAt: new Date().toISOString(),
       };
+
+      console.log('=== SAVING INVOICE ===');
+      console.log('Invoice ID:', uniqueId);
+      console.log('Invoice Number:', invoice.invoiceNumber);
+      console.log('Items count:', invoice.items.length);
+      console.log('Items data:', JSON.stringify(invoice.items, null, 2));
+      console.log('Current Redux state before save:', JSON.stringify({
+        invoiceNumber: invoice.invoiceNumber,
+        startDate: invoice.startDate,
+        endDate: invoice.endDate,
+        totalAmount: invoice.totalAmount,
+        lastId: invoice.lastId
+      }));
 
       // Save to Redux store
       dispatch(saveInvoice(invoiceToSave));
       
       // Save to AsyncStorage
       const currentInvoices = await StorageService.getInvoices();
+      console.log('Current invoices count before saving:', currentInvoices.length);
+      
       const updatedInvoices = [...currentInvoices, invoiceToSave];
+      console.log('Updated invoices count after adding new:', updatedInvoices.length);
+      
       await StorageService.saveInvoices(updatedInvoices);
+      console.log('Invoice successfully saved to AsyncStorage');
+      console.log('All saved invoices after save:', JSON.stringify(updatedInvoices.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        itemCount: inv.items.length,
+        items: inv.items.map(item => ({ id: item.id, date: item.date, description: item.description, amount: item.amount }))
+      })), null, 2));
       
       toast.show({
         title: 'Invoice saved',
@@ -128,9 +164,18 @@ export const ExportScreen: React.FC = () => {
         status: 'success',
       });
       
-      // Clear current invoice
+      // Clear current invoice state completely
+      console.log('=== CLEARING CURRENT INVOICE ===');
+      console.log('Redux state before clear:', JSON.stringify({
+        invoiceNumber: invoice.invoiceNumber,
+        itemCount: invoice.items.length,
+        lastId: invoice.lastId
+      }));
+      
       dispatch(clearCurrentInvoice());
       setInvoiceTitle('');
+      
+      console.log('Invoice cleared successfully');
       
     } catch (error) {
       console.error('Save error:', error);
@@ -151,6 +196,23 @@ export const ExportScreen: React.FC = () => {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  // Navigation functions
+  const handleNavigateToHome = () => {
+    navigation.navigate('Home');
+  };
+
+  const handleNavigateToHistory = () => {
+    navigation.navigate('InvoicesHistory');
+  };
+
+  const handleNavigateToDetails = () => {
+    navigation.navigate('Details');
+  };
+
+  const handleNavigateToSettings = () => {
+    navigation.navigate('Settings');
   };
 
   return (
@@ -321,5 +383,72 @@ export const ExportScreen: React.FC = () => {
         </Box>
       </VStack>
     </ScrollView>
+
+    {/* Bottom Navigation Bar */}
+    <Box
+      bg="surface.50"
+      shadow={5}
+      safeAreaBottom
+      borderTopWidth={1}
+      borderTopColor="gray.200"
+    >
+      <HStack justifyContent="space-around" alignItems="center" py={2}>
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToHistory}
+          leftIcon={<Icon as={MaterialIcons} name="history" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          History
+        </Button>
+        
+        <Button
+          variant="ghost" 
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToHome}
+          leftIcon={<Icon as={MaterialIcons} name="home" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          Home
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm" 
+          flex={1}
+          onPress={handleNavigateToDetails}
+          leftIcon={<Icon as={MaterialIcons} name="description" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          Details
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={() => {}} // Already on export
+          leftIcon={<Icon as={MaterialIcons} name="file-download" size="sm" />}
+          _text={{ fontSize: "xs", fontWeight: "bold" }}
+          colorScheme="blue"
+        >
+          Export
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToSettings}
+          leftIcon={<Icon as={MaterialIcons} name="settings" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          Settings
+        </Button>
+      </HStack>
+    </Box>
   );
 };

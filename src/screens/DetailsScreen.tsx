@@ -18,12 +18,17 @@ import {
 } from 'native-base';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootState } from '../store';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { addOrUpdateItem, removeItem, calculateTotal } from '../store/invoiceSlice';
 import { InvoiceItem } from '../types';
 import { getDayOfWeek } from '../utils/invoiceUtils';
 
+type DetailsNavigationProp = NavigationProp<RootStackParamList, 'Details'>;
+
 export const DetailsScreen: React.FC = () => {
+  const navigation = useNavigation<DetailsNavigationProp>();
   const dispatch = useDispatch();
   const toast = useToast();
   
@@ -98,6 +103,23 @@ export const DetailsScreen: React.FC = () => {
 
   const formatAmount = (amount: number): string => {
     return amount > 0 ? `$${amount}` : '';
+  };
+
+  // Navigation functions
+  const handleNavigateToHome = () => {
+    navigation.navigate('Home');
+  };
+
+  const handleNavigateToHistory = () => {
+    navigation.navigate('InvoicesHistory');
+  };
+
+  const handleNavigateToExport = () => {
+    navigation.navigate('Export');
+  };
+
+  const handleNavigateToSettings = () => {
+    navigation.navigate('Settings');
   };
 
   return (
@@ -292,6 +314,74 @@ export const DetailsScreen: React.FC = () => {
           </AlertDialog.Footer>
         </AlertDialog.Content>
       </AlertDialog>
+
+      {/* Bottom Navigation Bar */}
+      <Box
+        bg="surface.50"
+        shadow={5}
+        safeAreaBottom
+        borderTopWidth={1}
+        borderTopColor="gray.200"
+      >
+        <HStack justifyContent="space-around" alignItems="center" py={2}>
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToHistory}
+            leftIcon={<Icon as={MaterialIcons} name="history" size="sm" />}
+            _text={{ fontSize: "xs" }}
+          >
+            History
+          </Button>
+          
+          <Button
+            variant="ghost" 
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToHome}
+            leftIcon={<Icon as={MaterialIcons} name="home" size="sm" />}
+            _text={{ fontSize: "xs" }}
+          >
+            Home
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm" 
+            flex={1}
+            onPress={() => {}} // Already on details
+            leftIcon={<Icon as={MaterialIcons} name="description" size="sm" />}
+            _text={{ fontSize: "xs", fontWeight: "bold" }}
+            colorScheme="blue"
+          >
+            Details
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToExport}
+            leftIcon={<Icon as={MaterialIcons} name="file-download" size="sm" />}
+            _text={{ fontSize: "xs" }}
+            isDisabled={invoice.items.length === 0}
+          >
+            Export
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToSettings}
+            leftIcon={<Icon as={MaterialIcons} name="settings" size="sm" />}
+            _text={{ fontSize: "xs" }}
+          >
+            Settings
+          </Button>
+        </HStack>
+      </Box>
     </Box>
   );
 };

@@ -16,18 +16,26 @@ import {
 } from 'native-base';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootState } from '../store';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { loadInvoices, deleteInvoice } from '../store/invoicesSlice';
 import { StorageService } from '../services/storageService';
 import { generateAndShareExcel } from '../utils/excelUtils';
 import { Invoice } from '../types';
 import { getDayOfWeek } from '../utils/invoiceUtils';
+import { useTheme } from '../contexts/ThemeContext';
+
+type InvoicesHistoryNavigationProp = NavigationProp<RootStackParamList, 'InvoicesHistory'>;
 
 export const InvoicesHistoryScreen: React.FC = () => {
+  const navigation = useNavigation<InvoicesHistoryNavigationProp>();
   const dispatch = useDispatch();
   const toast = useToast();
+  const { isDarkMode } = useTheme();
   
   const { savedInvoices } = useSelector((state: RootState) => state.invoices);
+  const { invoice } = useSelector((state: RootState) => state);
   
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -39,12 +47,19 @@ export const InvoicesHistoryScreen: React.FC = () => {
     loadSavedInvoices();
   }, []);
 
+  // Debug: Log Redux state changes
+  useEffect(() => {
+    console.log('Redux savedInvoices updated:', savedInvoices.length, savedInvoices);
+  }, [savedInvoices]);
+
   const loadSavedInvoices = async () => {
     try {
       setIsLoading(true);
       const invoices = await StorageService.getInvoices();
+      console.log('Loaded invoices from storage:', invoices.length);
       dispatch(loadInvoices(invoices));
     } catch (error) {
+      console.error('Error loading invoices:', error);
       toast.show({
         title: 'Error loading invoices',
         status: 'error',
@@ -117,38 +132,77 @@ export const InvoicesHistoryScreen: React.FC = () => {
   };
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    try {
+      if (!dateString) return 'Invalid date';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'Invalid date';
+    }
   };
 
   const formatAmount = (amount: number): string => {
-    return `$${amount.toFixed(2)}`;
+    try {
+      const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+      if (isNaN(numAmount)) return '$0.00';
+      return `$${numAmount.toFixed(2)}`;
+    } catch (error) {
+      console.error('Error formatting amount:', amount, error);
+      return '$0.00';
+    }
   };
 
   const getInvoiceTypesSummary = (items: any[]): string => {
-    const hasKitchen = items.some(item => item.description.includes('Kitchen'));
-    const hasNight = items.some(item => item.description.includes('Night'));
-    
-    if (hasKitchen && hasNight) return 'Kitchen & Night';
-    if (hasKitchen) return 'Kitchen';
-    if (hasNight) return 'Night';
-    return 'Other';
+    try {
+      if (!Array.isArray(items) || items.length === 0) return 'No items';
+      
+      const hasKitchen = items.some(item => item && item.description && item.description.includes('Kitchen'));
+      const hasNight = items.some(item => item && item.description && item.description.includes('Night'));
+      
+      if (hasKitchen && hasNight) return 'Kitchen & Night';
+      if (hasKitchen) return 'Kitchen';
+      if (hasNight) return 'Night';
+      return 'Other';
+    } catch (error) {
+      console.error('Error getting invoice types summary:', error);
+      return 'Unknown';
+    }
+  };
+
+  // Navigation functions
+  const handleNavigateToHome = () => {
+    navigation.navigate('Home');
+  };
+
+  const handleNavigateToDetails = () => {
+    navigation.navigate('Details');
+  };
+
+  const handleNavigateToExport = () => {
+    navigation.navigate('Export');
+  };
+
+  const handleNavigateToSettings = () => {
+    navigation.navigate('Settings');
   };
 
   if (isLoading) {
     return (
-      <Box flex={1} justifyContent="center" alignItems="center">
-        <Text>Loading invoices...</Text>
+      <Box flex={1} justifyContent="center" alignItems="center" bg="surface.100">
+        <Text color="text.50">Loading invoices...</Text>
       </Box>
     );
   }
 
   return (
-    <Box flex={1} bg="gray.50">
+    <Box flex={1} bg="surface.100">
       <ScrollView flex={1}>
         <VStack space={4} p={4}>
           {/* Header Stats */}
@@ -175,69 +229,93 @@ export const InvoicesHistoryScreen: React.FC = () => {
 
           {/* Invoices List */}
           {savedInvoices.length === 0 ? (
-            <Box bg="white" rounded="lg" p={4} shadow={2}>
+            <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
               <VStack space={3} alignItems="center">
                 <Icon as={MaterialIcons} name="receipt-long" size="3xl" color="gray.400" />
-                <Text textAlign="center" color="gray.500" fontSize="lg">
+                <Text textAlign="center" color="text.300" fontSize="lg">
                   No saved invoices yet
                 </Text>
-                <Text textAlign="center" color="gray.400" fontSize="sm">
+                <Text textAlign="center" color="text.400" fontSize="sm">
                   Create and save your first invoice to see it here
                 </Text>
               </VStack>
             </Box>
           ) : (
             savedInvoices
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .map((invoice) => (
-                <Box key={invoice.id} bg="white" rounded="lg" p={4} shadow={2} onTouchEnd={() => handleInvoicePress(invoice)}>
-                  <VStack space={2}>
-                    <HStack justifyContent="space-between" alignItems="flex-start">
-                      <VStack flex={1} space={1}>
-                        <HStack alignItems="center" space={2}>
-                          <Text fontSize="lg" fontWeight="bold">
-                            Invoice #{invoice.invoiceNumber}
+              .sort((a, b) => {
+                try {
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                } catch (error) {
+                  console.error('Error sorting invoices:', error);
+                  return 0;
+                }
+              })
+              .map((invoice, index) => {
+                // Add safety checks to prevent rendering errors
+                if (!invoice || !invoice.id) {
+                  console.error('Invalid invoice at index:', index, invoice);
+                  return null;
+                }
+                
+                const safeItems = invoice.items || [];
+                const safeEmployee = invoice.employee || { name: 'Unknown', lastname: 'User' };
+                const safeInvoiceNumber = invoice.invoiceNumber || 0;
+                const safeTotalAmount = invoice.totalAmount || 0;
+                const safeStartDate = invoice.startDate || '';
+                const safeEndDate = invoice.endDate || '';
+                const safeCreatedAt = invoice.createdAt || new Date().toISOString();
+                
+                return (
+                  <Box key={`${invoice.id}-${index}`} bg="surface.50" rounded="lg" p={4} shadow={2} onTouchEnd={() => handleInvoicePress(invoice)}>
+                    <VStack space={2}>
+                      <HStack justifyContent="space-between" alignItems="flex-start">
+                        <VStack flex={1} space={1}>
+                          <HStack alignItems="center" space={2}>
+                            <Text fontSize="lg" fontWeight="bold" color="text.50">
+                              Invoice #{safeInvoiceNumber}
+                            </Text>
+                            <Badge
+                              colorScheme="blue"
+                              variant="subtle"
+                              rounded="full"
+                            >
+                              {getInvoiceTypesSummary(safeItems)}
+                            </Badge>
+                          </HStack>
+                          
+                          <Text fontSize="sm" color="text.200">
+                            {safeEmployee.name} {safeEmployee.lastname}
                           </Text>
-                          <Badge
+                          
+                          <Text fontSize="sm" color="text.300">
+                            {safeStartDate && safeEndDate ? `${formatDate(safeStartDate)} - ${formatDate(safeEndDate)}` : 'No dates available'}
+                          </Text>
+                          
+                          <Text fontSize="xs" color="text.400">
+                            {safeItems.length} items • Created {formatDate(safeCreatedAt)}
+                          </Text>
+                        </VStack>
+                        
+                        <VStack alignItems="flex-end" space={1}>
+                          <Text fontSize="xl" fontWeight="bold" color="green.600">
+                            {formatAmount(safeTotalAmount)}
+                          </Text>
+                          <Button
+                            size="xs"
+                            variant="outline"
                             colorScheme="blue"
-                            variant="subtle"
-                            rounded="full"
+                            onPress={() => handleExportInvoice(invoice)}
+                            isLoading={isExporting}
                           >
-                            {getInvoiceTypesSummary(invoice.items)}
-                          </Badge>
-                        </HStack>
-                        
-                        <Text fontSize="sm" color="gray.600">
-                          {invoice.employee.name} {invoice.employee.lastname}
-                        </Text>
-                        
-                        <Text fontSize="sm" color="gray.500">
-                          {formatDate(invoice.startDate)} - {formatDate(invoice.endDate)}
-                        </Text>
-                        
-                        <Text fontSize="xs" color="gray.400">
-                          {invoice.items.length} items • Created {formatDate(invoice.createdAt)}
-                        </Text>
-                      </VStack>
-                      
-                      <VStack alignItems="flex-end" space={1}>
-                        <Text fontSize="xl" fontWeight="bold" color="green.600">
-                          {formatAmount(invoice.totalAmount)}
-                        </Text>
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          colorScheme="blue"
-                          onPress={() => handleExportInvoice(invoice)}
-                          isLoading={isExporting}
-                        >
-                          Export
-                        </Button>
-                      </VStack>
-                    </HStack>
-                  </VStack>
-                </Box>
-              ))
+                            Export
+                          </Button>
+                        </VStack>
+                      </HStack>
+                    </VStack>
+                  </Box>
+                );
+              })
+              .filter(Boolean) // Remove null elements
           )}
         </VStack>
       </ScrollView>
@@ -369,6 +447,75 @@ export const InvoicesHistoryScreen: React.FC = () => {
         icon={<Icon color="white" as={MaterialIcons} name="refresh" size="sm" />}
         onPress={loadSavedInvoices}
       />
+
+      {/* Bottom Navigation Bar */}
+      <Box
+        bg="surface.50"
+        shadow={5}
+        safeAreaBottom
+        borderTopWidth={1}
+        borderTopColor="gray.200"
+      >
+        <HStack justifyContent="space-around" alignItems="center" py={2}>
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={() => {}} // Already on history
+            leftIcon={<Icon as={MaterialIcons} name="history" size="sm" />}
+            _text={{ fontSize: "xs", fontWeight: "bold" }}
+            colorScheme="blue"
+          >
+            History
+          </Button>
+          
+          <Button
+            variant="ghost" 
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToHome}
+            leftIcon={<Icon as={MaterialIcons} name="home" size="sm" />}
+            _text={{ fontSize: "xs" }}
+          >
+            Home
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm" 
+            flex={1}
+            onPress={handleNavigateToDetails}
+            leftIcon={<Icon as={MaterialIcons} name="description" size="sm" />}
+            _text={{ fontSize: "xs" }}
+            isDisabled={invoice.items.length === 0}
+          >
+            Details
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToExport}
+            leftIcon={<Icon as={MaterialIcons} name="file-download" size="sm" />}
+            _text={{ fontSize: "xs" }}
+            isDisabled={invoice.items.length === 0}
+          >
+            Export
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            flex={1}
+            onPress={handleNavigateToSettings}
+            leftIcon={<Icon as={MaterialIcons} name="settings" size="sm" />}
+            _text={{ fontSize: "xs" }}
+          >
+            Settings
+          </Button>
+        </HStack>
+      </Box>
     </Box>
   );
 };

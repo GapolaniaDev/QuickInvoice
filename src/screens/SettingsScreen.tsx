@@ -10,16 +10,27 @@ import {
   AlertDialog,
   Divider,
   Badge,
+  Radio,
+  FormControl,
+  Icon,
 } from 'native-base';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootState } from '../store';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { StorageService } from '../services/storageService';
 import { clearCurrentInvoice } from '../store/invoiceSlice';
 import { loadInvoices } from '../store/invoicesSlice';
+import { useTheme, ThemeMode } from '../contexts/ThemeContext';
+
+type SettingsNavigationProp = NavigationProp<RootStackParamList, 'Settings'>;
 
 export const SettingsScreen: React.FC = () => {
+  const navigation = useNavigation<SettingsNavigationProp>();
   const dispatch = useDispatch();
   const toast = useToast();
+  const { isDarkMode, themeMode, setThemeMode, systemColorScheme } = useTheme();
   
   const { employee, company, invoice, invoices } = useSelector((state: RootState) => state);
   
@@ -70,11 +81,28 @@ export const SettingsScreen: React.FC = () => {
 
   const info = getStorageInfo();
 
+  // Navigation functions
+  const handleNavigateToHome = () => {
+    navigation.navigate('Home');
+  };
+
+  const handleNavigateToHistory = () => {
+    navigation.navigate('InvoicesHistory');
+  };
+
+  const handleNavigateToDetails = () => {
+    navigation.navigate('Details');
+  };
+
+  const handleNavigateToExport = () => {
+    navigation.navigate('Export');
+  };
+
   return (
-    <ScrollView flex={1} bg="gray.50">
+    <ScrollView flex={1} bg="surface.100">
       <VStack space={4} p={4}>
         {/* App Info */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
             <Text fontSize="lg" fontWeight="bold" color="blue.600">
               Quick Invoice
@@ -88,10 +116,54 @@ export const SettingsScreen: React.FC = () => {
           </VStack>
         </Box>
 
-        {/* Storage Summary */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        {/* Theme Preferences */}
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
-            <Text fontSize="lg" fontWeight="bold" color="gray.700">
+            <Text fontSize="lg" fontWeight="bold" color="text.200">
+              Appearance
+            </Text>
+            
+            <FormControl>
+              <FormControl.Label>
+                <Text fontSize="sm" color="gray.600">
+                  Theme Mode
+                </Text>
+              </FormControl.Label>
+              
+              <Radio.Group
+                name="themeMode"
+                value={themeMode}
+                onChange={(value) => setThemeMode(value as ThemeMode)}
+              >
+                <VStack space={2}>
+                  <Radio value="system" colorScheme="blue">
+                    <Text fontSize="sm">
+                      System Default 
+                      <Text fontSize="xs" color="gray.500">
+                        {` (Currently ${systemColorScheme || 'light'})`}
+                      </Text>
+                    </Text>
+                  </Radio>
+                  <Radio value="light" colorScheme="blue">
+                    <Text fontSize="sm">Light Mode</Text>
+                  </Radio>
+                  <Radio value="dark" colorScheme="blue">
+                    <Text fontSize="sm">Dark Mode</Text>
+                  </Radio>
+                </VStack>
+              </Radio.Group>
+            </FormControl>
+            
+            <Text fontSize="xs" color="gray.500">
+              Current theme: {isDarkMode ? 'Dark' : 'Light'}
+            </Text>
+          </VStack>
+        </Box>
+
+        {/* Storage Summary */}
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
+          <VStack space={3}>
+            <Text fontSize="lg" fontWeight="bold" color="text.200">
               Data Summary
             </Text>
             
@@ -132,9 +204,9 @@ export const SettingsScreen: React.FC = () => {
         </Box>
 
         {/* Current Invoice Actions */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
-            <Text fontSize="lg" fontWeight="bold" color="gray.700">
+            <Text fontSize="lg" fontWeight="bold" color="text.200">
               Current Invoice
             </Text>
             
@@ -160,9 +232,9 @@ export const SettingsScreen: React.FC = () => {
         </Box>
 
         {/* Data Management */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
-            <Text fontSize="lg" fontWeight="bold" color="gray.700">
+            <Text fontSize="lg" fontWeight="bold" color="text.200">
               Data Management
             </Text>
             
@@ -185,9 +257,9 @@ export const SettingsScreen: React.FC = () => {
         </Box>
 
         {/* Help & Support */}
-        <Box bg="white" rounded="lg" p={4} shadow={2}>
+        <Box bg="surface.50" rounded="lg" p={4} shadow={2}>
           <VStack space={3}>
-            <Text fontSize="lg" fontWeight="bold" color="gray.700">
+            <Text fontSize="lg" fontWeight="bold" color="text.200">
               Help & Support
             </Text>
             
@@ -268,5 +340,74 @@ export const SettingsScreen: React.FC = () => {
         </AlertDialog.Content>
       </AlertDialog>
     </ScrollView>
+
+    {/* Bottom Navigation Bar */}
+    <Box
+      bg="surface.50"
+      shadow={5}
+      safeAreaBottom
+      borderTopWidth={1}
+      borderTopColor="gray.200"
+    >
+      <HStack justifyContent="space-around" alignItems="center" py={2}>
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToHistory}
+          leftIcon={<Icon as={MaterialIcons} name="history" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          History
+        </Button>
+        
+        <Button
+          variant="ghost" 
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToHome}
+          leftIcon={<Icon as={MaterialIcons} name="home" size="sm" />}
+          _text={{ fontSize: "xs" }}
+        >
+          Home
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm" 
+          flex={1}
+          onPress={handleNavigateToDetails}
+          leftIcon={<Icon as={MaterialIcons} name="description" size="sm" />}
+          _text={{ fontSize: "xs" }}
+          isDisabled={invoice.items.length === 0}
+        >
+          Details
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={handleNavigateToExport}
+          leftIcon={<Icon as={MaterialIcons} name="file-download" size="sm" />}
+          _text={{ fontSize: "xs" }}
+          isDisabled={invoice.items.length === 0}
+        >
+          Export
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          flex={1}
+          onPress={() => {}} // Already on settings
+          leftIcon={<Icon as={MaterialIcons} name="settings" size="sm" />}
+          _text={{ fontSize: "xs", fontWeight: "bold" }}
+          colorScheme="blue"
+        >
+          Settings
+        </Button>
+      </HStack>
+    </Box>
   );
 };

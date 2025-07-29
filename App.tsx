@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { BackHandler } from 'react-native';
 import { store } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 
 // Polyfill for BackHandler removeEventListener compatibility
 if (!BackHandler.removeEventListener) {
@@ -14,10 +15,9 @@ if (!BackHandler.removeEventListener) {
   };
 }
 
-// Extend the theme to include custom colors, fonts, etc
-const theme = extendTheme({
+// Create theme with light and dark mode support
+const createTheme = (isDarkMode: boolean) => extendTheme({
   colors: {
-    // Add custom color palette here
     primary: {
       50: '#E3F2FD',
       100: '#BBDEFB',
@@ -30,19 +30,70 @@ const theme = extendTheme({
       800: '#1565C0',
       900: '#0D47A1',
     },
+    // Custom colors for light/dark theme
+    surface: {
+      50: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+      100: isDarkMode ? '#2D2D2D' : '#F8F9FA',
+      200: isDarkMode ? '#404040' : '#E9ECEF',
+      300: isDarkMode ? '#525252' : '#DEE2E6',
+      400: isDarkMode ? '#666666' : '#CED4DA',
+      500: isDarkMode ? '#7A7A7A' : '#ADB5BD',
+      600: isDarkMode ? '#8E8E8E' : '#6C757D',
+      700: isDarkMode ? '#A2A2A2' : '#495057',
+      800: isDarkMode ? '#B6B6B6' : '#343A40',
+      900: isDarkMode ? '#CCCCCC' : '#212529',
+    },
+    text: {
+      50: isDarkMode ? '#F8F9FA' : '#212529',
+      100: isDarkMode ? '#E9ECEF' : '#343A40',
+      200: isDarkMode ? '#DEE2E6' : '#495057',
+      300: isDarkMode ? '#CED4DA' : '#6C757D',
+      400: isDarkMode ? '#ADB5BD' : '#ADB5BD',
+      500: isDarkMode ? '#6C757D' : '#CED4DA',
+      600: isDarkMode ? '#495057' : '#DEE2E6',
+      700: isDarkMode ? '#343A40' : '#E9ECEF',
+      800: isDarkMode ? '#212529' : '#F8F9FA',
+      900: isDarkMode ? '#000000' : '#FFFFFF',
+    },
   },
   config: {
-    // Changing initialColorMode to 'light'
-    initialColorMode: 'light',
+    initialColorMode: isDarkMode ? 'dark' : 'light',
+    useSystemColorMode: false,
+  },
+  components: {
+    Modal: {
+      baseStyle: {
+        content: {
+          bg: isDarkMode ? 'surface.50' : 'surface.50',
+        },
+      },
+    },
+    Text: {
+      baseStyle: {
+        color: isDarkMode ? 'text.50' : 'text.50',
+      },
+    },
   },
 });
+
+// App component that uses theme
+const AppContent: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const theme = createTheme(isDarkMode);
+
+  return (
+    <NativeBaseProvider theme={theme}>
+      <AppNavigator />
+    </NativeBaseProvider>
+  );
+};
 
 function App(): React.JSX.Element {
   return (
     <Provider store={store}>
-      <NativeBaseProvider theme={theme}>
-        <AppNavigator />
-      </NativeBaseProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </Provider>
   );
 }

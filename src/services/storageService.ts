@@ -52,7 +52,19 @@ export const StorageService = {
   // Invoices
   async saveInvoices(invoices: Invoice[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(KEYS.INVOICES, JSON.stringify(invoices));
+      console.log('=== STORAGE SERVICE SAVE ===');
+      console.log('Saving invoices count:', invoices.length);
+      console.log('Invoice summaries being saved:', invoices.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        itemCount: inv.items.length,
+        totalAmount: inv.totalAmount,
+        itemSummary: inv.items.map(item => ({ id: item.id, date: item.date, description: item.description, amount: item.amount }))
+      })));
+      
+      const jsonData = JSON.stringify(invoices);
+      await AsyncStorage.setItem(KEYS.INVOICES, jsonData);
+      console.log('Successfully saved to AsyncStorage');
     } catch (error) {
       console.error('Error saving invoices:', error);
       throw error;
@@ -61,8 +73,25 @@ export const StorageService = {
 
   async getInvoices(): Promise<Invoice[]> {
     try {
+      console.log('=== STORAGE SERVICE LOAD ===');
       const data = await AsyncStorage.getItem(KEYS.INVOICES);
-      return data ? JSON.parse(data) : [];
+      
+      if (!data) {
+        console.log('No saved invoices found');
+        return [];
+      }
+      
+      const invoices = JSON.parse(data);
+      console.log('Loaded invoices count:', invoices.length);
+      console.log('Invoice summaries loaded:', invoices.map((inv: Invoice) => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        itemCount: inv.items.length,
+        totalAmount: inv.totalAmount,
+        itemSummary: inv.items.map((item: any) => ({ id: item.id, date: item.date, description: item.description, amount: item.amount }))
+      })));
+      
+      return invoices;
     } catch (error) {
       console.error('Error getting invoices:', error);
       return [];

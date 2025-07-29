@@ -34,15 +34,28 @@ const invoiceSlice = createSlice({
     },
     addOrUpdateItem: (state, action: PayloadAction<InvoiceItem>) => {
       const item = { ...action.payload };
+      
       if (item.id === null || item.id === undefined) {
-        item.id = ++state.lastId;
+        // Ensure we have a unique ID
+        state.lastId = state.lastId + 1;
+        item.id = state.lastId;
+        
+        // Ensure the ID is truly unique (safety check)
+        while (state.items.some(existingItem => existingItem.id === item.id)) {
+          state.lastId = state.lastId + 1;
+          item.id = state.lastId;
+        }
+        
         state.items.push(item);
+        console.log(`Added new item with ID ${item.id}:`, item);
       } else {
         const index = state.items.findIndex(i => i.id === item.id);
         if (index !== -1) {
           state.items[index] = item;
+          console.log(`Updated existing item with ID ${item.id}:`, item);
         } else {
           state.items.push(item);
+          console.log(`Added item with existing ID ${item.id}:`, item);
         }
       }
     },
@@ -56,7 +69,13 @@ const invoiceSlice = createSlice({
       state.totalAmount = state.items.reduce((total, item) => total + parseFloat(String(item.amount)), 0);
     },
     clearCurrentInvoice: (state) => {
-      return initialState;
+      // Deep clear all state to prevent reference pollution
+      state.invoiceNumber = 0;
+      state.startDate = '';
+      state.endDate = '';
+      state.items = [];
+      state.totalAmount = 0;
+      state.lastId = 0;
     },
     setItems: (state, action: PayloadAction<InvoiceItem[]>) => {
       state.items = action.payload;

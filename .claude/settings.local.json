@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pod install:*)",
+      "Bash(npx react-native:*)"
+    ],
+    "deny": []
+  }
+}
